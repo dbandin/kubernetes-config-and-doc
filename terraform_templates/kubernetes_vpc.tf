@@ -46,6 +46,37 @@ resource "aws_route_table_association" "association-subnet" {
   route_table_id = "${aws_route_table.rt1.id}"
 }
 
+data "aws_iam_policy_document" "instance-assume-role-policy" {
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_policy_attachment" "kops-admin" {
+  name = "kops-role-attachment"
+  roles = ["${aws_iam_role.kops-admin.name}"]
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+}
+
+resource "aws_iam_role" "kops-admin" {
+  name               = "kops-admin-role"
+  path               = "/"
+  assume_role_policy = "${data.aws_iam_policy_document.instance-assume-role-policy.json}"
+  provisioner "local-exec" {
+    command = "sleep 10"
+  }
+}
+
+resource "aws_iam_instance_profile" "kops-admin-profile" {
+  name = "kops-admin-profile"
+  role = "${aws_iam_role.kops-admin.name}"
+}
+
 resource "aws_instance" "terraform_linux" {
   ami = "ami-07683a44e80cd32c5"
   instance_type = "t2.micro"
@@ -56,9 +87,10 @@ resource "aws_instance" "terraform_linux" {
     create_before_destroy = true
   }
   tags {
-    Name = "control-vpc"
+    Name = "kops control instance"
   }
   user_data = "${file("scripts/control_instance_user_data.sh")}"
+  iam_instance_profile = "${aws_iam_instance_profile.kops-admin-profile.name}"
 }
 
 resource "aws_key_pair" "kube_control_key" {
@@ -88,6 +120,17 @@ resource "aws_security_group" "sshsg" {
   }
 }
 
+resource "aws_s3_bucket" "b" {
+  bucket = "clusters.db.transfinity.systems"
+  acl = "private"
+
+  tags = {
+    Name = "KOPS Clusters"
+    Environment = "Dev"
+    Region = "eu-west-1"
+  }
+}
+
 output "vpc-id" {
   value = "${aws_vpc.terraform-vpc.id}"
 }
@@ -110,4 +153,8 @@ output "instance-public-ip" {
 
 output "key-id" {
   value = "${aws_key_pair.kube_control_key.key_name}"
+}
+
+output "s3-bucket" {
+  value = "${aws_s3_bucket.b.bucket}"
 }
