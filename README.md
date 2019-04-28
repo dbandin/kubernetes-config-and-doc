@@ -59,9 +59,9 @@ $ echo $?
 0
 ```
 #### AWs Cli on GNU/Linux
-	* TBD
+- TBD
 #### AWs Cli on Windows
-	* TBD
+- TBD
 
 ### Terraform binary
 Terraform is not more than a statically compiled binary, the deployment is simple. Just having "terraform" in path woudl be enough. I'll install [Terraform][4] in my laptop, currently using MacOS, but there are options for other operating systems.
@@ -416,6 +416,26 @@ $ kubectl get all --all-namespaces
 $ kubectl describe pod -n jenkins <jenkins-pod>
 ```
 
+## Manually Launch tweet2text
+I had a Python application that did in a day just to play around in gitlab named [tweet2text][8]. This application is cli based, and gets text from an image in a tweet. I started to adapt the application to flask this weekend to have a Python application to deploy. The application is not fully functional, but it can be seen in the browser as an example, will finish it if I have time.
+
+The application is replicated to github now in the repository [tweet2text-flax][9] for this test. The repository have 3 branches.
+- master: it's not funcional, points to the other two branches.
+- cli-version: it's the original cli version from gitlab.
+- flask-web-version: it's the adaptation to a flask application of the cli application.
+
+### Deploy in kubernetes
+To deploy in kubernetes it's only necessary to retrieve the file [tweet2text.yaml][10] to be retrieved in the control instance with kubectl.
+
+From the control instance with kubectl run:
+```
+$ wget https://raw.githubusercontent.com/dbandin/tweet2text-flax/flask-web-version/deploy/tweet2text.yaml
+$ kubectl apply -f tweet2text.yaml
+```
+
+That's is enough to get the image from docker and run it in a pod.
+
+
 ## TO-DO
 - Add configuration for hosted zones in the terraform template.
 - Improve user-data. Too many hardcoded urls and values. But it's simple right now.
@@ -432,3 +452,6 @@ $ kubectl describe pod -n jenkins <jenkins-pod>
 [5]: https://releases.hashicorp.com/terraform/0.11.13/terraform_0.11.13_darwin_amd64.zip "Terraform Binary"
 [6]: https://brew.sh/ "Hombre Official page"
 [7]: https://github.com/dbandin/kubernetes-config-and-doc "This repo"
+[8]: https://gitlab.com/dbandin/tweet2text "Tweet2text Gitlab repository"
+[9]: https://github.com/dbandin/tweet2text-flax "Tweet2text Github repository"
+[10]: https://raw.githubusercontent.com/dbandin/tweet2text-flax/flask-web-version/deploy/tweet2text.yaml "Tweet2text kubernetes yaml definition"
