@@ -2,7 +2,7 @@ provider "aws" {
   region = "eu-west-1"
   shared_credentials_file = "${pathexpand("~/.aws/credentials")}"
 }
-resource "aws_vpc" "terraform-vpc" {
+resource "aws_vpc" "control-instance-vpc" {
   cidr_block = "192.168.0.0/16"
   instance_tenancy = "default"
   enable_dns_support = "true"
@@ -14,7 +14,7 @@ resource "aws_vpc" "terraform-vpc" {
 }
 
 resource "aws_subnet" "public-1" {
-  vpc_id = "${aws_vpc.terraform-vpc.id}"
+  vpc_id = "${aws_vpc.control-instance-vpc.id}"
   cidr_block = "192.168.0.0/24"
   map_public_ip_on_launch = "true"
   availability_zone = "eu-west-1b"
@@ -24,14 +24,14 @@ resource "aws_subnet" "public-1" {
 }
 
 resource "aws_internet_gateway" "gw" {
-  vpc_id = "${aws_vpc.terraform-vpc.id}"
+  vpc_id = "${aws_vpc.control-instance-vpc.id}"
   tags {
     Name = "internet-gateway"
   }
 }
 
 resource "aws_route_table" "rt1" {
-  vpc_id = "${aws_vpc.terraform-vpc.id}"
+  vpc_id = "${aws_vpc.control-instance-vpc.id}"
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = "${aws_internet_gateway.gw.id}"
@@ -77,7 +77,7 @@ resource "aws_iam_instance_profile" "kops-admin-profile" {
   role = "${aws_iam_role.kops-admin.name}"
 }
 
-resource "aws_instance" "terraform_linux" {
+resource "aws_instance" "control_instance" {
   ami = "ami-07683a44e80cd32c5"
   instance_type = "t2.micro"
   vpc_security_group_ids = ["${aws_security_group.sshsg.id}"]
@@ -95,12 +95,12 @@ resource "aws_instance" "terraform_linux" {
 
 resource "aws_key_pair" "kube_control_key" {
   key_name = "KubeControlKey"
-  public_key = "${file("~/.ssh/DiegoTest.pub")}"
+  public_key = "${file("~/.ssh/id_rsa_kube.pub")}"
 }
 
 resource "aws_security_group" "sshsg" {
   name = "security_group_for_kub_control_ssh"
-  vpc_id = "${aws_vpc.terraform-vpc.id}"
+  vpc_id = "${aws_vpc.control-instance-vpc.id}"
   ingress {
     from_port = 22
     to_port = 22
@@ -132,7 +132,7 @@ resource "aws_s3_bucket" "b" {
 }
 
 output "vpc-id" {
-  value = "${aws_vpc.terraform-vpc.id}"
+  value = "${aws_vpc.control-instance-vpc.id}"
 }
 
 output "vpc-publicsubnet" {
@@ -144,11 +144,11 @@ output "vpc-publicsubnet-id" {
 }
 
 output "instance-id" {
-  value = "${aws_instance.terraform_linux.id}"
+  value = "${aws_instance.control_instance.id}"
 }
 
 output "instance-public-ip" {
-  value = "${aws_instance.terraform_linux.public_ip}"
+  value = "${aws_instance.control_instance.public_ip}"
 }
 
 output "key-id" {
